@@ -1,0 +1,724 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Loggr - API de Logs - Load Testing",
+		"description": "Collection para testes de carga da API de Logs com scripts automatizados",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "created_log_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "created_trace_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Check API Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response time is less than 500ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(500);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs?per_page=1",
+							"host": ["{{base_url}}"],
+							"path": ["logs"],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Create Log",
+			"item": [
+				{
+					"name": "Create Single Log - Info",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 202 Accepted', function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"",
+									"pm.test('Response has id and trace_id', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('trace_id');",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"    ",
+									"    // Save IDs for later use",
+									"    pm.collectionVariables.set('created_log_id', jsonData.id);",
+									"    pm.collectionVariables.set('created_trace_id', jsonData.trace_id);",
+									"});",
+									"",
+									"pm.test('Response time is less than 200ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(200);",
+									"});",
+									"",
+									"pm.test('IDs are valid UUIDs', function () {",
+									"    var jsonData = pm.response.json();",
+									"    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+									"    pm.expect(jsonData.id).to.match(uuidRegex);",
+									"    pm.expect(jsonData.trace_id).to.match(uuidRegex);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate random data for testing",
+									"const services = ['auth-service', 'payment-service', 'order-service', 'notification-service'];",
+									"const randomService = services[Math.floor(Math.random() * services.length)];",
+									"",
+									"pm.collectionVariables.set('random_service', randomService);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Test log created via Postman at {{$timestamp}}\",\n    \"level\": \"info\",\n    \"service_name\": \"{{random_service}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/logs",
+							"host": ["{{base_url}}"],
+							"path": ["logs"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Log - Error",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 202 Accepted', function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"",
+									"pm.test('Response time is less than 200ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Error processing payment - Card declined\",\n    \"level\": \"error\",\n    \"service_name\": \"payment-service\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/logs",
+							"host": ["{{base_url}}"],
+							"path": ["logs"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Create - Load Test",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 202 Accepted', function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"",
+									"// Log performance metrics",
+									"console.log('Response Time: ' + pm.response.responseTime + 'ms');",
+									"",
+									"// Track success rate",
+									"if (pm.response.code === 202) {",
+									"    pm.environment.set('successful_requests', ",
+									"        (parseInt(pm.environment.get('successful_requests') || 0) + 1));",
+									"} else {",
+									"    pm.environment.set('failed_requests', ",
+									"        (parseInt(pm.environment.get('failed_requests') || 0) + 1));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const levels = ['debug', 'info', 'notice', 'warning', 'error', 'critical'];",
+									"const services = ['auth-service', 'payment-service', 'order-service', 'notification-service', 'email-service'];",
+									"const messages = [",
+									"    'User authentication successful',",
+									"    'Payment processed',",
+									"    'Order created',",
+									"    'Notification sent',",
+									"    'Database connection established',",
+									"    'Cache hit',",
+									"    'API rate limit exceeded',",
+									"    'Invalid request parameters'",
+									"];",
+									"",
+									"pm.collectionVariables.set('random_level', levels[Math.floor(Math.random() * levels.length)]);",
+									"pm.collectionVariables.set('random_service', services[Math.floor(Math.random() * services.length)]);",
+									"pm.collectionVariables.set('random_message', messages[Math.floor(Math.random() * messages.length)]);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"{{random_message}} - Iteration {{$randomInt}}\",\n    \"level\": \"{{random_level}}\",\n    \"service_name\": \"{{random_service}}\",\n    \"timestamp\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/logs",
+							"host": ["{{base_url}}"],
+							"path": ["logs"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Search Logs",
+			"item": [
+				{
+					"name": "List All Logs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has data array', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Response has pagination meta', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('meta');",
+									"    pm.expect(jsonData.meta).to.have.property('current_page');",
+									"    pm.expect(jsonData.meta).to.have.property('total');",
+									"});",
+									"",
+									"pm.test('Response time is less than 1000ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(1000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs?per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["logs"],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search by trace_id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('All logs have matching trace_id', function () {",
+									"    var jsonData = pm.response.json();",
+									"    var traceId = pm.collectionVariables.get('created_trace_id');",
+									"    ",
+									"    jsonData.data.forEach(function(log) {",
+									"        pm.expect(log.trace_id).to.equal(traceId);",
+									"    });",
+									"});",
+									"",
+									"pm.test('Response time is less than 500ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(500);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs?trace_id={{created_trace_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["logs"],
+							"query": [
+								{
+									"key": "trace_id",
+									"value": "{{created_trace_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Level (Error)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('All logs have error level', function () {",
+									"    var jsonData = pm.response.json();",
+									"    ",
+									"    jsonData.data.forEach(function(log) {",
+									"        pm.expect(log.level).to.equal('error');",
+									"    });",
+									"});",
+									"",
+									"pm.test('Response time is less than 500ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(500);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs?level=error",
+							"host": ["{{base_url}}"],
+							"path": ["logs"],
+							"query": [
+								{
+									"key": "level",
+									"value": "error"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Service Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('All logs are from payment-service', function () {",
+									"    var jsonData = pm.response.json();",
+									"    ",
+									"    jsonData.data.forEach(function(log) {",
+									"        pm.expect(log.service_name).to.equal('payment-service');",
+									"    });",
+									"});",
+									"",
+									"pm.test('Response time is less than 500ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(500);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs?service_name=payment-service",
+							"host": ["{{base_url}}"],
+							"path": ["logs"],
+							"query": [
+								{
+									"key": "service_name",
+									"value": "payment-service"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Complex Search - Load Test",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});",
+									"",
+									"// Log performance",
+									"console.log('Complex Query Response Time: ' + pm.response.responseTime + 'ms');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs?level=error&service_name=payment-service&per_page=50",
+							"host": ["{{base_url}}"],
+							"path": ["logs"],
+							"query": [
+								{
+									"key": "level",
+									"value": "error"
+								},
+								{
+									"key": "service_name",
+									"value": "payment-service"
+								},
+								{
+									"key": "per_page",
+									"value": "50"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Get Single Log",
+			"item": [
+				{
+					"name": "Get Log by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has log data', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('message');",
+									"    pm.expect(jsonData.data).to.have.property('level');",
+									"});",
+									"",
+									"pm.test('Response time is less than 300ms', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(300);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/{{created_log_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "{{created_log_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Non-existent Log",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Error message is present', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logs/00000000-0000-0000-0000-000000000000",
+							"host": ["{{base_url}}"],
+							"path": ["logs", "00000000-0000-0000-0000-000000000000"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Validation Tests",
+			"item": [
+				{
+					"name": "Create Log - Missing Required Fields",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Validation errors are present', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Test log\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/logs",
+							"host": ["{{base_url}}"],
+							"path": ["logs"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Log - Invalid Level",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Level validation error exists', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.errors).to.have.property('level');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Test log\",\n    \"level\": \"invalid_level\",\n    \"service_name\": \"test-service\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/logs",
+							"host": ["{{base_url}}"],
+							"path": ["logs"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
